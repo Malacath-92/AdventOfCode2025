@@ -2,9 +2,6 @@ import aocd
 
 import cli
 
-import functools
-import itertools
-
 sample_data = """\
 987654321111111
 811111111111119
