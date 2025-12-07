@@ -2,6 +2,8 @@ import aocd
 
 import cli
 
+from functools import lru_cache
+
 sample_data = """\
 .......S.......
 ...............
@@ -52,7 +54,7 @@ class Field:
 
 
 field = Field(data)
-beam_starts = [ (x, 0) for x in range(field.width) if field[x][0] == "S" ]
+beam_starts = [(x, 0) for x in range(field.width) if field[x][0] == "S"]
 assert len(beam_starts) == 1
 beam_start = beam_starts[0]
 
@@ -63,8 +65,10 @@ field[beam_start[0]][beam_start[1]] = "."
 while beams:
     x, y = beams.pop()
     match field[x][y]:
-        case None: pass
-        case "|": pass
+        case None:
+            pass
+        case "|":
+            pass
         case ".":
             field[x][y] = "|"
             beams.append((x, y + 1))
@@ -75,3 +79,22 @@ while beams:
             beams.append((x - 1, y))
 
 print(f"Problem 1: {splits}")
+
+
+@lru_cache()
+def timelines(beam):
+    x, y = beam
+    match field[x][y]:
+        case None:
+            return 1
+        case "|":
+            return timelines((x, y + 1))
+        case ".":
+            return timelines((x, y + 1))
+        case "^":
+            t_left = timelines((x - 1, y))
+            t_right = timelines((x + 1, y))
+            return t_left + t_right
+
+
+print(f"Problem 2: {timelines(beam_start)}")
