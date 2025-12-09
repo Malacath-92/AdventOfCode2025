@@ -30,7 +30,7 @@ def is_fresh(ingredient):
 
 fresh_ingredients = [ingredient for ingredient in available if is_fresh(ingredient)]
 
-print("Problem 1:", len(fresh_ingredients))
+print(f"Problem 1: {len(fresh_ingredients)}")
 
 # MemoryError
 # all_fresh = set(
@@ -77,4 +77,4 @@ while reduce_ranges():
 range_lengths = list(map(lambda x: x[1] - x[0] + 1, fresh_ranges))
 num_fresh = sum(range_lengths)
 
-print("Problem 1:", num_fresh)
+print(f"Problem 2: {num_fresh}")

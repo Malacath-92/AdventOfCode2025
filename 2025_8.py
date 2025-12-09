@@ -65,7 +65,7 @@ for circuit_id in circuits.values():
 circuit_sizes = list(circuit_sizes.values())
 biggest_circuits = sorted(circuit_sizes, reverse=True)[:3]
 
-print("Part 1:", reduce(lambda a, b: a * b, biggest_circuits))
+print(f"Part 1: {reduce(lambda a, b: a * b, biggest_circuits)}")
 
 def find_last_connection():
     circuits = {
