@@ -5,3 +5,7 @@ tqdm
 
 # Profiling only
 line_profiler
+
+# Day 10
+z3
+z3-solver

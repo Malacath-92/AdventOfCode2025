@@ -4,6 +4,8 @@ import cli
 
 from collections import deque
 
+import z3
+
 sample_data = """\
 [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
@@ -19,15 +21,15 @@ class LightIndicators:
 
 
 class Button:
-    def __init__(self, lights):
-        assert lights[-1] == ")"
-        self.controlled_lights = list(map(int, lights[1:-1].split(",")))
+    def __init__(self, slots):
+        assert slots[-1] == ")"
+        self.controlled_slots = list(map(int, slots[1:-1].split(",")))
 
 
 class JoltageRequirements:
     def __init__(self, req_list):
         assert req_list[-1] == "}"
-        self.requirements = list(map(int, req_list[1:-1].split(",")))
+        self.joltages = list(map(int, req_list[1:-1].split(",")))
 
 
 class Machine:
@@ -53,7 +55,7 @@ class Lights:
 
     def push_button(self, button: Button):
         new_state = Lights(self.lights)
-        for i in button.controlled_lights:
+        for i in button.controlled_slots:
             new_state.lights[i] = not new_state.lights[i]
         return new_state
 
@@ -61,7 +63,7 @@ class Lights:
         return self.lights == indicators.lights
 
 
-def get_shortest_configure(machine: Machine):
+def get_shortest_light_configure(machine: Machine):
     queue = deque()
     queue.append((Lights([False] * machine.num_lights), 0))
 
@@ -77,10 +79,7 @@ def get_shortest_configure(machine: Machine):
                 return depth + 1
 
             # Remember this node, getting here later is never worth going deeper
-            visited_node = (
-                tuple(switched_lights.lights),
-                tuple(button.controlled_lights),
-            )
+            visited_node = tuple(switched_lights.lights)
             if visited_node in visited:
                 continue
             visited.add(visited_node)
@@ -89,5 +88,66 @@ def get_shortest_configure(machine: Machine):
             queue.append((switched_lights, depth + 1))
 
 
-shortest_configures = list(map(get_shortest_configure, machines))
+shortest_configures = list(map(get_shortest_light_configure, machines))
 print(f"Part 1: {sum(shortest_configures)}")
+
+
+class Joltages:
+    def __init__(self, joltages):
+        self.joltages = joltages[:]
+
+    def push_button(self, button: Button):
+        new_state = Joltages(self.joltages)
+        for i in button.controlled_slots:
+            new_state.joltages[i] += 1
+        return new_state
+
+    def matches_requirements(self, reqs: JoltageRequirements):
+        return self.joltages == reqs.joltages
+
+    def overextends_requirements(self, reqs: JoltageRequirements):
+        return any(j > r for j, r in zip(self.joltages, reqs.joltages))
+
+    def __lt__(self, rhs):
+        return tuple(self.joltages) < tuple(rhs.joltages)
+
+
+def get_shortest_joltage_configure(machine: Machine):
+    optimizer = z3.Optimize()
+
+    # Each button is pressed zero or more times
+    #   b_i >= 0
+    button_variables = []
+    for i, _ in enumerate(machine.buttons):
+        button_variable = z3.Int(f"button_{i}")
+        optimizer.add(button_variable >= 0)
+        button_variables.append(button_variable)
+
+    # For each joltage, the sum of all button presses affecting it
+    # is exactly the requirement for that joltage
+    #   j_i = sum of b_j if b_j affects j_i
+    #   j_i == r_i
+    for i, req in enumerate(machine.joltage_requirements.joltages):
+        joltage_equation = 0
+        for button, variable in zip(machine.buttons, button_variables):
+            if i in button.controlled_slots:
+                joltage_equation = joltage_equation + variable
+
+        optimizer.add(joltage_equation == req)
+
+    # The number of presses is equal to the sum of all button presses
+    #   presses == sum b_i
+    presses_variable = z3.Int("presses")
+    presses_equation = 0
+    for variable in button_variables:
+        presses_equation = presses_equation + variable
+    optimizer.add(presses_variable == presses_equation)
+
+    # Minimize the number of presses and return it
+    optimizer.minimize(presses_variable)
+    optimizer.check()
+    return optimizer.model()[presses_variable].as_long()
+
+
+shortest_configures = list(map(get_shortest_joltage_configure, machines))
+print(f"Part 2: {sum(shortest_configures)}")
