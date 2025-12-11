@@ -11,7 +11,6 @@ sample_data = """\
 [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}"""
 data = sample_data if cli.sample else aocd.data
-total_connections = 10 if cli.sample else 1000
 
 
 class LightIndicators:
