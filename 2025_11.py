@@ -2,7 +2,7 @@ import aocd
 
 import cli
 
-from functools import lru_cache
+from functools import lru_cache, reduce, partial
 
 sample_data = """\
 aaa: you hhh
@@ -28,11 +28,8 @@ class Device:
 devices = list(map(Device, data.splitlines()))
 graph = {d.id: d for d in devices}
 
-root = "you"
-target = "out"
 
-
-def filter_graph(graph):
+def filter_graph(graph, root, target):
     stack = []
 
     inverse_graph = {}
@@ -94,7 +91,84 @@ def get_num_paths(graph, from_node, to_node):
     return get_num_paths_impl(from_node)
 
 
-filtered_graph = filter_graph(graph)
-num_paths = get_num_paths(filtered_graph, root, target)
+root = "you"
+target = "out"
+filtered_graph = filter_graph(graph, root, target)
 
+num_paths = get_num_paths(filtered_graph, root, target)
 print(f"Part 1: {num_paths}")
+
+
+if cli.sample:
+    data = """\
+    svr: aaa bbb
+    aaa: fft
+    fft: ccc
+    bbb: tty
+    tty: ccc
+    ccc: ddd eee
+    ddd: hub
+    hub: fff
+    eee: dac
+    dac: fff
+    fff: ggg hhh
+    ggg: out
+    hhh: out"""
+    data = sample_data if cli.sample else aocd.data
+
+    devices = list(map(Device, data.splitlines()))
+    graph = {d.id: d for d in devices}
+
+
+root = "svr"
+target = "out"
+needs_visit = set(["dac", "fft"])
+filtered_graph = filter_graph(graph, root, target)
+
+
+class SubGraph:
+    def __init__(self, graph, sub_root, sub_target):
+        self.root = sub_root
+        self.target = sub_target
+        self.graph = filter_graph(filtered_graph, sub_root, sub_target)
+
+    @property
+    def num_paths(self):
+        return get_num_paths(self.graph, self.root, self.target)
+
+
+sub_graphs = []
+for interim_node in needs_visit:
+    sub_graphs.append(SubGraph(filter_graph, root, interim_node))
+    sub_graphs.append(SubGraph(filter_graph, interim_node, target))
+
+    for other_interim_node in needs_visit:
+        if interim_node != other_interim_node:
+            sub_graphs.append(SubGraph(filter_graph, interim_node, other_interim_node))
+sub_graphs = list(filter(lambda g: g.num_paths, sub_graphs))
+
+# Note: We end up having no paths from 'dac' -> 'fft' and thus we can filter out
+#       the sub-graph from 'svr' -> 'dac' and 'fft' -> 'out'
+#       We determine this programmatically below
+for interim_node in needs_visit:
+    for other_interim_node in needs_visit:
+        if interim_node == other_interim_node:
+            continue
+
+        def matching_subgraph(sub_graph, from_node, to_node):
+            return sub_graph.root == from_node and sub_graph.target == to_node
+
+        interim_connection = partial(
+            matching_subgraph, from_node=interim_node, to_node=other_interim_node
+        )
+        if not list(filter(interim_connection, sub_graphs)):
+            sub_graphs = [
+                g
+                for g in sub_graphs
+                if not matching_subgraph(g, root, interim_node)
+                and not matching_subgraph(g, other_interim_node, target)
+            ]
+
+sub_graph_num_paths = list(map(lambda g: g.num_paths, sub_graphs))
+num_paths = reduce(lambda a, b: a * b, sub_graph_num_paths)
+print(f"Part 2: {num_paths}")
