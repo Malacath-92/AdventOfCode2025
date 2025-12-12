@@ -58,3 +58,4 @@ parts = data.split("\n\n")
 containers = list(map(Container, parts[-1].splitlines()))
 
 print(f"Part 1: {len(list(c for c in containers if c.simple_fits_presents))}")
+print(f"Part 2: Thank god this year is a short one...")
