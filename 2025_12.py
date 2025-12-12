@@ -4,41 +4,11 @@ import cli
 
 from vector import Vector
 
-sample_data = """\
-0:
-###
-##.
-##.
+if cli.sample:
+    print("Joke's on you, this solution doesn't work for the sample...")
+    exit(1)
 
-1:
-###
-##.
-.##
-
-2:
-.##
-###
-##.
-
-3:
-##.
-###
-##.
-
-4:
-###
-#..
-###
-
-5:
-###
-.#.
-###
-
-4x4: 0 0 0 0 2 0
-12x5: 1 0 1 0 2 2
-12x5: 1 0 1 0 3 2"""
-data = sample_data if cli.sample else aocd.data
+data = aocd.data
 
 
 class Container:
